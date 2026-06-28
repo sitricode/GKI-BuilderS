@@ -157,7 +157,7 @@ MODULE_SYMVERS="$KSRC/out/Module.symvers"
 
 # --- ADD THIS LINE ---
 # Stop the kernel from appending the '+' for uncommitted changes
-#touch .scmversion
+touch .scmversion
 # ---------------------
 
 # --- KOBO CHANGED THE MSG TEMPLATE HERE ---
