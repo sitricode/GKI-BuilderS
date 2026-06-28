@@ -1,0 +1,191 @@
+name: Build GKI
+
+on:
+  workflow_call:
+    inputs:
+      RUNNER_TYPE:
+        type: string
+        default: 'self-hosted'
+      TODO:
+        type: string
+      KSU:
+        type: string
+      BUILD_BOOTIMG:
+        type: string
+      LAST_BUILD:
+        type: string
+      STATUS:
+        type: string
+        default: 'BETA'
+      BRANCH_CHOICE:
+        type: string
+        default: 'suikernel-stable'
+
+  workflow_dispatch:
+    inputs:
+      RUNNER_TYPE:
+        description: Choose the runner type
+        default: "self-hosted"
+        type: choice
+        options:
+          - "self-hosted"
+          - "ubuntu-latest"
+          - "server-hive"
+          - "kaela-build"
+
+      TODO:
+        description: To do
+        default: ""
+        type: choice
+        options:
+          - "kernel"
+          - "defconfig"
+
+      KSU:
+        description: KernelSU variant
+        default: "Next"
+        type: choice
+        options:
+          - "Next"
+      
+      BRANCH_CHOICE:
+        description: Target Kernel Branch
+        default: "master"
+        type: choice
+        options:
+          - "stable"
+          - "master"
+
+jobs:
+  build:
+    runs-on: ${{ (inputs.RUNNER_TYPE == 'server-hive' || inputs.RUNNER_TYPE == 'kaela-build') && 'self-hosted' || inputs.RUNNER_TYPE }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate Inputs and Secrets
+        env:
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          _error() {
+              echo "❌ ERROR: $*"
+              let ret++
+          }
+
+          ret=0
+          # Check Secrets
+          if [[ -z "$TG_CHAT_ID" ]]; then
+            _error "Missing TG_CHAT_ID secret (Telegram Chat ID)"
+          fi
+          if [[ -z "$TG_BOT_TOKEN" ]]; then
+            _error "Missing TG_BOT_TOKEN secret (Telegram Bot Token)"
+          fi
+          if [[ -z "$GH_TOKEN" ]]; then
+            _error "Missing GH_TOKEN secret (GitHub PAT)"
+          fi
+
+          if [[ $ret -gt 0 ]]; then
+            exit $ret
+          fi
+
+      - name: Install Dependencies
+        if: inputs.RUNNER_TYPE != 'server-hive'
+        run: |
+          if [ "${{ inputs.RUNNER_TYPE }}" == "kaela-build" ]; then
+            echo "Kaela: Installing Dependencies"
+            sudo pacman -Sy --noconfirm base-devel bc cpio flex bison github-cli git python tar perl wget curl lz4 zstd libarchive aria2 openssl python-pip python-lxml
+          else
+            export MAN_DISABLE=true
+            sudo rm -f /etc/apt/sources.list.d/yarn.list
+            sudo apt update -y
+            sudo apt install -y bc cpio flex bison aptitude gh git python3 \
+                                tar perl wget curl lz4 zstd libarchive-tools aria2
+            sudo aptitude install -y libssl-dev
+            pip install lxml
+          fi
+
+      - name: Run Build Script
+        env:
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          KSU: ${{ inputs.KSU }}
+          BUILD_BOOTIMG: ${{ inputs.BUILD_BOOTIMG }}
+          LAST_BUILD: ${{ inputs.LAST_BUILD }}
+          TODO: ${{ inputs.TODO }}
+          STATUS: ${{ inputs.STATUS }}
+          KERNEL_BRANCH_ENV: ${{ inputs.BRANCH_CHOICE }}
+          RUNNER_TYPE: ${{ inputs.RUNNER_TYPE }}
+        run: |
+          export GIT_CLONE_PROTECTION_ACTIVE=false
+          chmod +x *.sh
+          ./build.sh
+
+      - name: Upload Artifacts (ZIP Only)
+        id: upload-zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BASE_NAME }}-${{ github.run_number }}
+          path: |
+            artifacts/*.zip
+
+      - name: Upload Artifacts (Info File)
+        uses: actions/upload-artifact@v4
+        with:
+          name: info-${{ github.run_number }}
+          path: artifacts/*.txt
+
+      - name: Send Artifact Link to Telegram (SUCCESS)
+        if: inputs.STATUS != 'BETA' && success()
+        env:
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          MESSAGE_ID: ${{ env.MESSAGE_ID }}
+          BUILD_TIME: ${{ env.BUILD_TIME }}
+          SUCCESS_STICKER: ${{ inputs.RUNNER_TYPE == 'kaela-build' && 'CAACAgUAAxkBAAFLC8VqGuTmmanejG3DSoR77JtN9o2UmAACNRcAAhCHEFSMRfHfKtoZxjsE' || 'CAACAgUAAxkBAAFKwcFqFp4Lc-G23l8LbCYSvG9GH84WrgAC0RgAAsMgYFdOfiL7ZJKFUDsE' }}
+          ARTIFACT_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-zip.outputs.artifact-id }}
+        run: |
+            MSG="✅ *Build Succeeded*
+            ⏱️ Time to Build: $BUILD_TIME
+
+            📥 [Download Artifact]($ARTIFACT_URL)"
+
+            # 1. Send the success message
+            curl -s -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
+            -d chat_id="$TG_CHAT_ID" \
+            -d reply_to_message_id="$MESSAGE_ID" \
+            -d text="$MSG" \
+            -d parse_mode="Markdown" \
+            -d disable_web_page_preview=true
+
+            # 2. Send the happy animated sticker
+            curl -s -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendSticker" \
+            -d chat_id="$TG_CHAT_ID" \
+            -d reply_to_message_id="$MESSAGE_ID" \
+            -d sticker="$SUCCESS_STICKER"
+
+      - name: Send Failed Notification (FAILURE)
+        if: failure()
+        env:
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          MESSAGE_ID: ${{ env.MESSAGE_ID }}
+          FAIL_STICKER: ${{ inputs.RUNNER_TYPE == 'kaela-build' && 'CAACAgUAAxkBAAFLC7BqGuST6OsQCa0qjTNX2lsmk31WcgACrBQAAiRx8VbO0FIQbj3hUTsE' || 'CAACAgUAAxkBAAFKwb1qFp34bgajg3iXze7T62I9FC77DAAC4xYAArQkWVfE6uzpUzT2DzsE' }}
+        run: |
+            # 1. Send the error message
+            curl -s -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
+            -d chat_id="$TG_CHAT_ID" \
+            -d reply_to_message_id="$MESSAGE_ID" \
+            -d text="❌ *Aduh! Build Failed bang...* Please check the GitHub logs!" \
+            -d parse_mode="Markdown"
+
+            # 2. Send the sad sticker
+            curl -s -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendSticker" \
+            -d chat_id="$TG_CHAT_ID" \
+            -d reply_to_message_id="$MESSAGE_ID" \
+            -d sticker="$FAIL_STICKER"
