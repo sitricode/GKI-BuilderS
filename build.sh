@@ -95,7 +95,7 @@ patch -p1 < "$SUSFS_PATCHES"/50_add_susfs_in_gki-android12-5.10.patch
 
 # --- INJECT SELinux Rules ---
 # Rules are maintained in selinux.sh — edit that file to add new modules
-source "$workdir/selinux.sh"
+#source "$workdir/selinux.sh"
 # ------------------------------------------
 
 # --- INJECT Pavolia Reine KernelSU Patch ---
