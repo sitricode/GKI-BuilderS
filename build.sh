@@ -99,7 +99,7 @@ patch -p1 < "$SUSFS_PATCHES"/50_add_susfs_in_gki-android12-5.10.patch
 # ------------------------------------------
 
 # --- INJECT Pavolia Reine KernelSU Patch ---
-source "$workdir/PavoliaReinePatch.sh"
+#source "$workdir/PavoliaReinePatch.sh"
 # ------------------------------------------
 
 
@@ -157,7 +157,7 @@ MODULE_SYMVERS="$KSRC/out/Module.symvers"
 
 # --- ADD THIS LINE ---
 # Stop the kernel from appending the '+' for uncommitted changes
-touch .scmversion
+#touch .scmversion
 # ---------------------
 
 # --- KOBO CHANGED THE MSG TEMPLATE HERE ---
