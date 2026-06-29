@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Kernel name
-KERNEL_NAME="Miharu"
+KERNEL_NAME="MiharuYK"
 # Kernel Build variables
 USER="nigga"
 HOST="build-host"
@@ -10,8 +10,8 @@ TIMEZONE="Asia/Jakarta"
 ANYKERNEL_REPO="https://github.com/LoggingNewMemory/SuiKernel-anykernel"
 ANYKERNEL_BRANCH="gki"
 # Kernel Source
-KERNEL_REPO="https://github.com/sitricode/gki_5.10"
-KERNEL_BRANCH="${KERNEL_BRANCH_ENV:-master}"
+KERNEL_REPO="https://github.com/MillenniumOSS/android_kernel_common_android12-5.10"
+KERNEL_BRANCH="${KERNEL_BRANCH_ENV:-yuuka-main}"
 KERNEL_DEFCONFIG="gki_defconfig"
 # Release repository
 GKI_RELEASES_REPO=""
