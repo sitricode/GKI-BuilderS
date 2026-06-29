@@ -81,7 +81,7 @@ for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU; do
 done
 
 # Install kernelsu (Next)
-install_ksu pershoot/KernelSU-Next "next-susfs"
+install_ksu pershoot/KernelSU-Next "dev-susfs"
 
 # --- INTEGRATE SUSFS ---
 log "Cloning and applying SUSFS patches..."
