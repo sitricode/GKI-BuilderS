@@ -97,7 +97,7 @@ jobs:
         run: |
           if [ "${{ inputs.RUNNER_TYPE }}" == "ubuntu-latest" ]; then
             echo "Allocating 10GB Swap..."
-            sudo fallocate -l 10G /swapfile
+            sudo dd if=/dev/zero of=/swapfile bs=1M count=10240 status=progress
             sudo chmod 600 /swapfile
             sudo mkswap /swapfile
             sudo swapon /swapfile
