@@ -93,19 +93,10 @@ jobs:
           if [[ $ret -gt 0 ]]; then
             exit $ret
           fi
-      - name: Allocate Swap Space
-        run: |
-          if [ "${{ inputs.RUNNER_TYPE }}" == "ubuntu-latest" ]; then
-            echo "Allocating 10GB Swap..."
-            sudo dd if=/dev/zero of=/swapfile bs=1M count=10240 status=progress
-            sudo chmod 600 /swapfile
-            sudo mkswap /swapfile
-            sudo swapon /swapfile
-            sudo swapon --show
-            free -h
-          else
-            echo "Skipping swap space..."
-          fi
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 10
       - name: Install Dependencies
         if: inputs.RUNNER_TYPE != 'server-hive'
         run: |
