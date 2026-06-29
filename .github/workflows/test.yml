@@ -53,9 +53,8 @@ on:
         default: "master"
         type: choice
         options:
-          - "stable"
-          - "master"
-          - "v1"
+          - "millennium-base"
+          - "yuuka-main"
 
 jobs:
   build:
