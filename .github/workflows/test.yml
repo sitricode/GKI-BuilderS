@@ -55,6 +55,7 @@ on:
         options:
           - "stable"
           - "master"
+          - "v1"
 
 jobs:
   build:
