@@ -85,7 +85,7 @@ install_ksu sitricode/KernelSU-Next-Pershoot "dev-susfs"
 
 # --- INTEGRATE SUSFS ---
 log "Cloning and applying SUSFS patches..."
-git clone --depth=1 -q https://gitlab.com/simonpunk/susfs4ksu -b gki-android12-5.10 "$workdir/susfs"
+git clone --depth 10 -b gki-android12-5.10 https://gitlab.com/simonpunk/susfs4ksu "$workdir/susfs" && git -C "$workdir/susfs" checkout 86bb893e9a103b97d17045306f35eb239a623f2a
 SUSFS_PATCHES="$workdir/susfs/kernel_patches"
 
 cp -R "$SUSFS_PATCHES"/fs/* ./fs/
